@@ -5,3 +5,11 @@ div.Spelling {
 	-moz-user-select: none;
 	-ms-user-select: none;
 }
+
+.exception {
+	border-color: red !important;
+}
+
+.exception:focus {
+	box-shadow: 0 0 0 2px red !important;
+}

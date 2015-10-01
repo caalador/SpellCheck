@@ -44,12 +44,4 @@ public class MyComponentTest {
 
     }
 
-//    @Test
-//    public void testJazzy() throws IOException {
-//        SpellChecker checker = new SpellChecker(new SpellDictionaryHashMap(new InputStreamReader(Spelling.class.getClassLoader().getResourceAsStream("en.dic")), new InputStreamReader(Spelling.class.getClassLoader().getResourceAsStream("en_phonet.dat"))));
-//
-//        long start = System.currentTimeMillis();
-//        System.out.println(checker.getSuggestions("wallerst", 150000000));
-//        System.out.println("Spelling jazzy Time: " + (System.currentTimeMillis()-start));
-//    }
 }

@@ -7,4 +7,5 @@ public interface SpellCheckServerRpc extends ServerRpc {
 
     void checkSpelling(String string);
 
+    void checkForErrors(String string);
 }

@@ -24,7 +24,7 @@ public class Spelling {
 
     private boolean requireScandics = false;
 
-    final DamerauLevenshteinAlgorithm damerauLevenshtein = new DamerauLevenshteinAlgorithm(2, 2, 1, 3);
+    final DamerauLevenshteinAlgorithm damerauLevenshtein = new DamerauLevenshteinAlgorithm(2, 2, 1, 2);
 
     private static LoadingCache<String, HashMap<String, Integer>> wordMaps = CacheBuilder.newBuilder().maximumSize(10).expireAfterWrite(1, TimeUnit.DAYS).build(new CacheLoader<String, HashMap<String, Integer>>() {
         @Override

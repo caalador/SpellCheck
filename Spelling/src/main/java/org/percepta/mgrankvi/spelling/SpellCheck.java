@@ -1,15 +1,15 @@
 package org.percepta.mgrankvi.spelling;
 
 import com.google.gwt.thirdparty.guava.common.collect.Lists;
-import com.google.gwt.thirdparty.guava.common.collect.Maps;
 import com.vaadin.server.AbstractExtension;
 import com.vaadin.ui.AbstractTextField;
 import org.percepta.mgrankvi.spelling.client.SpellCheckClientRpc;
 import org.percepta.mgrankvi.spelling.client.SpellCheckServerRpc;
 import org.percepta.mgrankvi.spelling.client.SpellCheckState;
+import org.percepta.mgrankvi.spelling.client.Word;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,25 +19,57 @@ import java.util.regex.Pattern;
 public class SpellCheck extends AbstractExtension {
 
     private Spelling spelling;
-//    private LoadingCache<String, String> spellingCache = CacheBuilder.newBuilder().maximumSize(10).expireAfterWrite(1, TimeUnit.DAYS).build(new CacheLoader<String, String>() {
-//
-//        @Override
-//        public String load(String key) throws Exception {
-//            return spelling.correct(key);
-//        }
-//    });
 
     // To process events from the client, we implement ServerRpc
     private SpellCheckServerRpc rpc = new SpellCheckServerRpc() {
 
         @Override
         public void checkSpelling(String string) {
-            doSpellCheck(string);
+            List<Word> words = doSpellCheck(string);
+
+            getRpcProxy(SpellCheckClientRpc.class).corrections(words);
+            getRpcProxy(SpellCheckClientRpc.class).setException(!words.isEmpty());
+        }
+
+        @Override
+        public void checkForErrors(String string) {
+
+            List<String> words = splitWords(string);
+            boolean errors = false;
+            for (String word : words) {
+                if (!spelling.isOk(word)) {
+                    errors = true;
+                    break;
+                }
+            }
+
+            getRpcProxy(SpellCheckClientRpc.class).setException(errors);
         }
 
     };
 
-    private void doSpellCheck(String string) {
+    private List<Word> doSpellCheck(String string) {
+        List<String> words = splitWords(string);
+
+        List<Word> corrections = Lists.newLinkedList();
+        for (String word : words) {
+            if (!spelling.isOk(word)) {
+                Word thing = new Word();
+                thing.word = word;
+                thing.length = word.length();
+                thing.startPosition = string.indexOf(word);
+                LinkedList<String> candidates = spelling.getCandidates(word);
+                if (candidates.size() > 0 && !candidates.getFirst().equals(word)) {
+                    thing.candidates = candidates;
+                    corrections.add(thing);
+                }
+            }
+        }
+
+        return corrections;
+    }
+
+    private List<String> splitWords(String string) {
         List<String> words = Lists.newLinkedList();
 
         Pattern p = Pattern.compile("\\w+", Pattern.UNICODE_CHARACTER_CLASS);
@@ -46,27 +78,12 @@ public class SpellCheck extends AbstractExtension {
         while (m.find()) {
             words.add(m.group());
         }
-
-        HashMap<String, String> corrections = Maps.newHashMap();
-        for (String word : words) {
-            if (!spelling.isOk(word)) {
-                System.out.println("Word not ok: " + word);
-                corrections.put(word, spelling.correct(word));
-//                try {
-//                    corrections.put(word, spellingCache.get(word));
-//                } catch (ExecutionException e) {
-//                    e.printStackTrace();
-//                }
-            }
-        }
-
-        if (!corrections.isEmpty()) {
-            getRpcProxy(SpellCheckClientRpc.class)
-                    .corrections(corrections);
-        }
-        System.out.println(corrections.values());
+        return words;
     }
 
+    /**
+     * Use default english dictionary.
+     */
     public SpellCheck() {
         this("en.dic");
     }
@@ -100,21 +117,12 @@ public class SpellCheck extends AbstractExtension {
             @Override
             public void attach(AttachEvent event) {
                 if (component.getValue() != null && !component.getValue().isEmpty()) {
-                    doSpellCheck(component.getValue());
+                    List<Word> words = doSpellCheck(component.getValue());
+
+                    getRpcProxy(SpellCheckClientRpc.class).setException(!words.isEmpty());
                 }
             }
         });
 
-//        component.addTextChangeListener(new FieldEvents.TextChangeListener() {
-//
-//            @Override
-//            public void textChange(FieldEvents.TextChangeEvent event) {
-//                if (event.getText() != null && !event.getText().isEmpty()) {
-//                    doSpellCheck(event.getText());
-//                } else {
-//                    System.out.println("All ok.");
-//                }
-//            }
-//        });
     }
 }
