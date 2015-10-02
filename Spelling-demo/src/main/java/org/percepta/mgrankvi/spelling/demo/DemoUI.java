@@ -35,7 +35,7 @@ public class DemoUI extends UI {
         new SpellCheck().extend(component);
 
         final TextField swe = new TextField("Swedish");
-        new SpellCheck("sv.dic", true).extend(swe);
+        new SpellCheck("sv").extend(swe);
 
         TextArea area = new TextArea("An area");
         new SpellCheck().extend(area);

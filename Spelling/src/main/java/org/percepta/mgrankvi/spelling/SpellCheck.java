@@ -85,16 +85,12 @@ public class SpellCheck extends AbstractExtension {
      * Use default english dictionary.
      */
     public SpellCheck() {
-        this("en.dic");
+        this("en");
     }
 
     public SpellCheck(String dictionary) {
-        this(dictionary, false);
-    }
-
-    public SpellCheck(String dictionary, boolean scandics) {
         try {
-            spelling = new Spelling(dictionary, scandics);
+            spelling = new Spelling(dictionary);
         } catch (IOException e) {
             e.printStackTrace();
         }

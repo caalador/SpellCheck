@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -21,17 +22,16 @@ import java.util.regex.Pattern;
 public class Spelling {
 
     private HashMap<String, Integer> nWords;
+    private List<Character> characterMap = Lists.newLinkedList();
 
-    private boolean requireScandics = false;
-
-    final DamerauLevenshteinAlgorithm damerauLevenshtein = new DamerauLevenshteinAlgorithm(2, 2, 1, 2);
+    final DamerauLevenshteinAlgorithm damerauLevenshtein = new DamerauLevenshteinAlgorithm(2, 2, -1, 2);
 
     private static LoadingCache<String, HashMap<String, Integer>> wordMaps = CacheBuilder.newBuilder().maximumSize(10).expireAfterWrite(1, TimeUnit.DAYS).build(new CacheLoader<String, HashMap<String, Integer>>() {
         @Override
         public HashMap<String, Integer> load(String key) throws Exception {
             HashMap<String, Integer> nWords = Maps.newHashMap();
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream(key), "UTF-8"));
+System.out.println(key);
+            BufferedReader in = new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream(key + ".dic"), "UTF-8"));
             Pattern p = Pattern.compile("\\w+", Pattern.UNICODE_CHARACTER_CLASS);
             for (String temp = ""; temp != null; temp = in.readLine()) {
                 Matcher m = p.matcher(temp.toLowerCase());
@@ -44,14 +44,31 @@ public class Spelling {
         }
     });
 
-    public Spelling(String file) throws IOException {
-        this(file, false);
-    }
+    private static LoadingCache<String, List<Character>> specials = CacheBuilder.newBuilder().maximumSize(10).expireAfterWrite(1, TimeUnit.DAYS).build(new CacheLoader<String, List<Character>>() {
+        @Override
+        public List<Character> load(String key) throws Exception {
+            List<Character> characters = Lists.newLinkedList();
 
-    public Spelling(String file, boolean scandics) throws IOException {
-        requireScandics = scandics;
+            BufferedReader in = new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream(key + ".char"), "UTF-8"));
+            Pattern p = Pattern.compile("\\w+", Pattern.UNICODE_CHARACTER_CLASS);
+            for (String temp = ""; temp != null; temp = in.readLine()) {
+                Matcher m = p.matcher(temp.toLowerCase());
+                while (m.find()) {
+                    temp = m.group();
+                    for (char c : temp.toCharArray()) {
+                        characters.add(c);
+                    }
+                }
+            }
+            in.close();
+            return characters;
+        }
+    });
+
+    public Spelling(String file) throws IOException {
         try {
             nWords = wordMaps.get(file);
+            characterMap = specials.get(file);
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
@@ -62,26 +79,16 @@ public class Spelling {
         for (int i = 0; i < word.length(); ++i) {
             result.add(word.substring(0, i) + word.substring(i + 1));
 
-            for (char c = 'a'; c <= 'z'; ++c) {
+            for (char c : characterMap) {
                 result.add(word.substring(0, i) + String.valueOf(c) + word.substring(i + 1));
-            }
-            if(requireScandics) {
-                result.add(word.substring(0, i) + String.valueOf('å') + word.substring(i + 1));
-                result.add(word.substring(0, i) + String.valueOf('ä') + word.substring(i + 1));
-                result.add(word.substring(0, i) + String.valueOf('ö') + word.substring(i + 1));
             }
         }
         for (int i = 0; i < word.length() - 1; ++i) {
             result.add(word.substring(0, i) + word.substring(i + 1, i + 2) + word.substring(i, i + 1) + word.substring(i + 2));
         }
         for (int i = 0; i <= word.length(); ++i) {
-            for (char c = 'a'; c <= 'z'; ++c) {
+            for (char c : characterMap) {
                 result.add(word.substring(0, i) + String.valueOf(c) + word.substring(i));
-            }
-            if(requireScandics) {
-                result.add(word.substring(0, i) + String.valueOf('å') + word.substring(i));
-                result.add(word.substring(0, i) + String.valueOf('ä') + word.substring(i));
-                result.add(word.substring(0, i) + String.valueOf('ö') + word.substring(i));
             }
         }
         return result;
@@ -123,10 +130,8 @@ public class Spelling {
 
         LinkedList<String> list = edits(word);
         for (String s : list) {
-            if (nWords.containsKey(s)) {
-                if (!result.contains(s)) {
-                    result.add(s);
-                }
+            if (nWords.containsKey(s) && !result.contains(s)) {
+                result.add(s);
             }
         }
         if (!result.isEmpty()) {
@@ -136,10 +141,8 @@ public class Spelling {
         }
         for (String s : list) {
             for (String w : edits(s)) {
-                if (nWords.containsKey(w)) {
-                    if (!result.contains(w)) {
-                        result.add(w);
-                    }
+                if (nWords.containsKey(w) && !result.contains(w)) {
+                    result.add(w);
                 }
             }
         }
@@ -150,11 +153,6 @@ public class Spelling {
         }
 
         return result;
-
-    }
-
-    private char alphabetEnd() {
-        return requireScandics ? 'ö' : 'z';
     }
 
     private void sortResult(final String word, LinkedList<String> result) {
