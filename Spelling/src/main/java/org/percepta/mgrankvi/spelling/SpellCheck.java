@@ -3,6 +3,7 @@ package org.percepta.mgrankvi.spelling;
 import com.google.gwt.thirdparty.guava.common.collect.Lists;
 import com.vaadin.server.AbstractExtension;
 import com.vaadin.ui.AbstractTextField;
+import org.apache.commons.lang.WordUtils;
 import org.percepta.mgrankvi.spelling.client.SpellCheckClientRpc;
 import org.percepta.mgrankvi.spelling.client.SpellCheckServerRpc;
 import org.percepta.mgrankvi.spelling.client.SpellCheckState;
@@ -57,10 +58,19 @@ public class SpellCheck extends AbstractExtension {
                 Word thing = new Word();
                 thing.word = word;
                 thing.length = word.length();
-                thing.startPosition = string.indexOf(word);
+                thing.startPosition = string.toLowerCase().indexOf(word);
+
                 LinkedList<String> candidates = spelling.getCandidates(word);
                 if (candidates.size() > 0 && !candidates.getFirst().equals(word)) {
-                    thing.candidates = candidates;
+                    if(Character.isUpperCase(string.charAt(thing.startPosition))){
+                        thing.word = WordUtils.capitalize(thing.word);
+                        for(String candidate : candidates) {
+                            thing.candidates.add(WordUtils.capitalize(candidate));
+                        }
+                    } else {
+                        thing.candidates = candidates;
+                    }
+
                     corrections.add(thing);
                 }
             }
@@ -120,5 +130,11 @@ public class SpellCheck extends AbstractExtension {
             }
         });
 
+    }
+
+    @Override
+    public void remove() {
+        super.remove();
+        getRpcProxy(SpellCheckClientRpc.class).remove();
     }
 }

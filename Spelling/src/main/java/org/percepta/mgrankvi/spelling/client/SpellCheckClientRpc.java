@@ -12,4 +12,6 @@ public interface SpellCheckClientRpc extends ClientRpc {
 	void corrections(List<Word> corrections);
 
 	void setException(boolean exception);
+
+	void remove();
 }

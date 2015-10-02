@@ -4,10 +4,12 @@ import com.google.gwt.cell.client.AbstractCell;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
+import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.cellview.client.CellList;
 import com.google.gwt.user.cellview.client.HasKeyboardPagingPolicy;
 import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.ScrollPanel;
 import com.google.gwt.user.client.ui.TextBoxBase;
@@ -31,7 +33,7 @@ import java.util.List;
 // Connector lives in the client and the @Connect annotation specifies the
 // corresponding server-side component
 @Connect(SpellCheck.class)
-public class SpellCheckConnector extends AbstractExtensionConnector {
+public class SpellCheckConnector extends AbstractExtensionConnector implements KeyUpHandler {
 
     // ServerRpc is used to send events to server. Communication implementation
     // is automatically created here
@@ -40,6 +42,7 @@ public class SpellCheckConnector extends AbstractExtensionConnector {
     PopupPanel popupPanel;
     CellList<String> list;
     Word currentWord;
+    HandlerRegistration handler;
 
     ComponentConnector connection;
     boolean scheduled = false;
@@ -78,6 +81,7 @@ public class SpellCheckConnector extends AbstractExtensionConnector {
                 list.setVisibleRange(0, values.size());
                 list.setWidth("100%");
                 list.setKeyboardPagingPolicy(HasKeyboardPagingPolicy.KeyboardPagingPolicy.INCREASE_RANGE);
+                list.getElement().getStyle().setBackgroundColor("WHITE");
 
 
                 final SingleSelectionModel<String> selectionModel = new SingleSelectionModel<String>(keyProvider);
@@ -99,7 +103,11 @@ public class SpellCheckConnector extends AbstractExtensionConnector {
 
                 panel.setWidget(list);
                 popupPanel.setWidget(panel);
-                popupPanel.setPopupPosition(extendedWidget.getAbsoluteLeft(), extendedWidget.getAbsoluteTop() + extendedWidget.getOffsetHeight());
+                int top = extendedWidget.getAbsoluteTop() + extendedWidget.getOffsetHeight();
+                if(top + popupPanel.getOffsetHeight() > Window.getClientHeight()) {
+                    top = extendedWidget.getAbsoluteTop() - popupPanel.getOffsetHeight();
+                }
+                popupPanel.setPopupPosition(extendedWidget.getAbsoluteLeft(), top);
                 popupPanel.show();
             }
 
@@ -110,8 +118,40 @@ public class SpellCheckConnector extends AbstractExtensionConnector {
                 else
                     connection.getWidget().removeStyleName("exception");
             }
+
+            @Override
+            public void remove() {
+                handler.removeHandler();
+                if (scheduled) {
+                    textChangeEventTrigger.cancel();
+                    scheduled = false;
+                }
+            }
         });
 
+    }
+
+    @Override
+    public void onKeyUp(KeyUpEvent event) {
+        if (scheduled) {
+            textChangeEventTrigger.cancel();
+            scheduled = false;
+        }
+
+        if (event.isControlKeyDown() && event.isDownArrow()) {
+            rpc.checkSpelling(((TextBoxBase) connection.getWidget()).getText());
+            return;
+        } else if (event.getNativeKeyCode() == KeyCodes.KEY_ESCAPE && popupPanel != null && popupPanel.isVisible()) {
+            popupPanel.hide();
+        }
+
+
+        if ((Character.toString((char) event.getNativeKeyCode())).isEmpty() || event.isDownArrow() || event.isLeftArrow() || event.isRightArrow() || event.isUpArrow() ||
+                event.getNativeKeyCode() == KeyCodes.KEY_ENTER || event.getNativeKeyCode() == KeyCodes.KEY_SPACE || event.getNativeKeyCode() == KeyCodes.KEY_BACKSPACE) {
+            return;
+        }
+        textChangeEventTrigger.schedule(250);
+        scheduled = true;
     }
 
     private class Cell extends AbstractCell<String> {
@@ -143,36 +183,11 @@ public class SpellCheckConnector extends AbstractExtensionConnector {
         }
     };
 
-
     @Override
     protected void extend(ServerConnector target) {
         connection = (ComponentConnector) target;
 
-        connection.getWidget().addDomHandler(new KeyUpHandler() {
-
-            @Override
-            public void onKeyUp(KeyUpEvent event) {
-                if (scheduled) {
-                    textChangeEventTrigger.cancel();
-                    scheduled = false;
-                }
-
-                if (event.isControlKeyDown() && event.isDownArrow()) {
-                    rpc.checkSpelling(((TextBoxBase) connection.getWidget()).getText());
-                    return;
-                } else if(event.getNativeKeyCode() == KeyCodes.KEY_ESCAPE && popupPanel != null && popupPanel.isVisible()) {
-                    popupPanel.hide();
-                }
-
-
-                if ((Character.toString((char) event.getNativeKeyCode())).isEmpty() || event.isDownArrow() || event.isLeftArrow() || event.isRightArrow() || event.isUpArrow() ||
-                        event.getNativeKeyCode() == KeyCodes.KEY_ENTER || event.getNativeKeyCode() == KeyCodes.KEY_SPACE || event.getNativeKeyCode() == KeyCodes.KEY_BACKSPACE) {
-                    return;
-                }
-                textChangeEventTrigger.schedule(250);
-                scheduled = true;
-            }
-        }, KeyUpEvent.getType());
+        handler = connection.getWidget().addDomHandler(this, KeyUpEvent.getType());
     }
 
     @Override

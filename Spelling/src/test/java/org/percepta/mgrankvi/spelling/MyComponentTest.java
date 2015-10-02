@@ -1,6 +1,7 @@
 package org.percepta.mgrankvi.spelling;
 
 import junit.framework.Assert;
+import org.apache.commons.lang.WordUtils;
 import org.junit.Test;
 
 import java.util.LinkedList;
@@ -39,6 +40,21 @@ public class MyComponentTest {
         String corrected = spelling.correct("öevr");
         System.out.println(candidates.toString());
         Assert.assertEquals("över", corrected);
+
+    }
+//
+
+    @Test
+    public void testSpellingInSwedishWithCapitals() throws Exception {
+        Spelling spelling = new Spelling("sv");
+
+        long start = System.currentTimeMillis();
+
+        LinkedList<String> candidates = spelling.getCandidates("Over");
+        System.out.println("Spelling Time Swedish: " + (System.currentTimeMillis() - start));
+        String corrected = spelling.correct("Öevr");
+        System.out.println(candidates.toString());
+        Assert.assertEquals("Över", corrected);
 
 
     }

@@ -30,7 +30,7 @@ public class Spelling {
         @Override
         public HashMap<String, Integer> load(String key) throws Exception {
             HashMap<String, Integer> nWords = Maps.newHashMap();
-System.out.println(key);
+
             BufferedReader in = new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream(key + ".dic"), "UTF-8"));
             Pattern p = Pattern.compile("\\w+", Pattern.UNICODE_CHARACTER_CLASS);
             for (String temp = ""; temp != null; temp = in.readLine()) {
@@ -99,11 +99,11 @@ System.out.println(key);
     }
 
     public String correct(String word) {
-        if (nWords.containsKey(word)) return word;
+        if (nWords.containsKey(word) || nWords.containsKey(word.toLowerCase())) return word;
         LinkedList<String> list = edits(word);
         HashMap<Integer, String> candidates = new HashMap<Integer, String>();
         for (String s : list) {
-            if (nWords.containsKey(s)) {
+            if (nWords.containsKey(s) || nWords.containsKey(s.toLowerCase())) {
                 candidates.put(nWords.get(s), s);
             }
         }
@@ -112,7 +112,7 @@ System.out.println(key);
         }
         for (String s : list) {
             for (String w : edits(s)) {
-                if (nWords.containsKey(w)) {
+                if (nWords.containsKey(w) || nWords.containsKey(w.toLowerCase())) {
                     candidates.put(nWords.get(w), w);
                 }
             }
@@ -123,14 +123,14 @@ System.out.println(key);
     public LinkedList<String> getCandidates(final String word) {
         LinkedList<String> result = Lists.newLinkedList();
 
-        if (nWords.containsKey(word)) {
+        if (nWords.containsKey(word) || nWords.containsKey(word.toLowerCase())) {
             result.add(word);
             return result;
         }
 
         LinkedList<String> list = edits(word);
         for (String s : list) {
-            if (nWords.containsKey(s) && !result.contains(s)) {
+            if ((nWords.containsKey(s)  || nWords.containsKey(s.toLowerCase())) && !result.contains(s)) {
                 result.add(s);
             }
         }
@@ -141,7 +141,7 @@ System.out.println(key);
         }
         for (String s : list) {
             for (String w : edits(s)) {
-                if (nWords.containsKey(w) && !result.contains(w)) {
+                if ((nWords.containsKey(w) || nWords.containsKey(w.toLowerCase())) && !result.contains(w)) {
                     result.add(w);
                 }
             }

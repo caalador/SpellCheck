@@ -7,6 +7,7 @@ import com.vaadin.data.Property;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.server.VaadinServlet;
 import com.vaadin.ui.Alignment;
+import com.vaadin.ui.NativeSelect;
 import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
@@ -25,31 +26,69 @@ public class DemoUI extends UI {
     public static class Servlet extends VaadinServlet {
     }
 
+//    SpellCheck textCheck;
+//    SpellCheck areaCheck;
+VerticalLayout fields;
+    final VerticalLayout layout = new VerticalLayout();
+
     @Override
     protected void init(VaadinRequest request) {
+        final NativeSelect languages = new NativeSelect("Language selection");
+        languages.addItem("en");
+        languages.addItem("sv");
+        languages.addItem("fi");
 
-        // Initialize our new UI component
-        TextField component = new TextField("Spell checked");
-        component.setImmediate(true);
+        languages.setNullSelectionAllowed(false);
+        languages.select("en");
 
-        new SpellCheck().extend(component);
+        languages.addValueChangeListener(new Property.ValueChangeListener() {
+            @Override
+            public void valueChange(Property.ValueChangeEvent event) {
+                layout.removeComponent(fields);
+                fields = createFields((String) languages.getValue());
+                layout.addComponent(fields);
+                layout.setComponentAlignment(fields, Alignment.MIDDLE_CENTER);
+            }
+        });
 
-        final TextField swe = new TextField("Swedish");
-        new SpellCheck("sv").extend(swe);
-
-        TextArea area = new TextArea("An area");
-        new SpellCheck().extend(area);
 
         // Show it in the middle of the screen
-        final VerticalLayout layout = new VerticalLayout();
+
         layout.setStyleName("demoContentLayout");
         layout.setSizeFull();
-        layout.addComponents(component, swe, area);
-        layout.setComponentAlignment(swe, Alignment.MIDDLE_CENTER);
+        layout.addComponents(languages);
+
+        fields = createFields((String) languages.getValue());
+        layout.addComponent(fields);
+
+        layout.setComponentAlignment(languages, Alignment.MIDDLE_CENTER);
+        layout.setComponentAlignment(fields, Alignment.MIDDLE_CENTER);
+
+        setContent(layout);
+    }
+
+    public VerticalLayout createFields(String language) {
+        VerticalLayout layout = new VerticalLayout();
+        layout.setSizeFull();
+        final TextField component = new TextField("Spell checked");
+        component.setImmediate(true);
+        final TextArea area = new TextArea("A spell checked text area");
+        // Initialize our new UI component
+        component.addValueChangeListener(new Property.ValueChangeListener() {
+            @Override
+            public void valueChange(Property.ValueChangeEvent event) {
+                System.out.println("Value changed to: " + event.getProperty().getValue().toString());
+            }
+        });
+
+        new SpellCheck(language).extend(component);
+        new SpellCheck(language).extend(area);
+
+        layout.addComponents(component, area);
         layout.setComponentAlignment(component, Alignment.MIDDLE_CENTER);
         layout.setComponentAlignment(area, Alignment.MIDDLE_CENTER);
-        setContent(layout);
 
+        return layout;
     }
 
 }
